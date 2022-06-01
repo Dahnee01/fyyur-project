@@ -1,7 +1,7 @@
 from app import db
 
 class Venue(db.Model):
-    __tablename__ = 'Venue'
+    __tablename__ = 'venue'
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String)
     genres = db.Column(db.ARRAY(db.String()))
@@ -17,10 +17,10 @@ class Venue(db.Model):
     shows = db.relationship('Show', backref="venue", lazy=True,cascade='all, delete')
 
     def __repr__(self):
-      return f'<Venue {self.id} {self.name}>'
+      return f'<venue {self.id} {self.name}>'
 
 class Artist(db.Model):
-    __tablename__ = 'Artist'
+    __tablename__ = 'artist'
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String)
     genres = db.Column(db.ARRAY(db.String))
@@ -35,14 +35,14 @@ class Artist(db.Model):
     shows = db.relationship('Show', backref="artist", lazy=True, cascade='all, delete')
 
     def __repr__(self):
-      return f'<Artist {self.id} {self.name}>'
+      return f'<artist {self.id} {self.name}>'
 
 class Show(db.Model):
-    __tablename__ = 'Show'
+    __tablename__ = 'show'
     id = db.Column(db.Integer, primary_key=True)
     artist_id = db.Column(db.Integer, db.ForeignKey(
-        'Artist.id'), nullable=False)
-    venue_id = db.Column(db.Integer, db.ForeignKey('Venue.id'), nullable=False)
+        'artist.id'), nullable=False)
+    venue_id = db.Column(db.Integer, db.ForeignKey('venue.id'), nullable=False)
     start_time = db.Column(db.DateTime, nullable=False)
 
     def __repr__(self):
