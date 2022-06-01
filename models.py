@@ -1,4 +1,7 @@
-from app import db
+from flask_sqlalchemy import SQLAlchemy
+
+
+db = SQLAlchemy()
 
 class Venue(db.Model):
     __tablename__ = 'venue'
@@ -14,7 +17,7 @@ class Venue(db.Model):
     website_link = db.Column(db.String(120))
     seeking_talent = db.Column(db.Boolean)
     seeking_description = db.Column(db.String(500))
-    shows = db.relationship('Show', backref="venue", lazy=True,cascade='all, delete')
+    shows = db.relationship('Show', backref="venue", lazy='joined',cascade='all, delete')
 
     def __repr__(self):
       return f'<venue {self.id} {self.name}>'
@@ -32,7 +35,7 @@ class Artist(db.Model):
     facebook_link = db.Column(db.String(120))
     seeking_venue = db.Column(db.Boolean)
     seeking_description = db.Column(db.String(500))
-    shows = db.relationship('Show', backref="artist", lazy=True, cascade='all, delete')
+    shows = db.relationship('Show', backref="artist", lazy='joined', cascade='all, delete')
 
     def __repr__(self):
       return f'<artist {self.id} {self.name}>'

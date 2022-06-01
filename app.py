@@ -3,10 +3,19 @@
 #----------------------------------------------------------------------------#
 
 import json
+import re
 import dateutil.parser
 import babel
 from datetime import datetime
-from flask import Flask, render_template, request, Response, flash, redirect, url_for,jsonify
+from flask import (
+  Flask, 
+  render_template,
+  request, 
+  Response,
+  flash, redirect,
+  url_for,
+  jsonify
+)
 from flask_moment import Moment
 from flask_sqlalchemy import SQLAlchemy
 import logging
@@ -15,7 +24,7 @@ from flask_wtf import Form
 from forms import *
 import os
 from flask_migrate import Migrate
-
+from models import *
 import collections
 
 #----------------------------------------------------------------------------#
@@ -25,13 +34,13 @@ import collections
 app = Flask(__name__)
 moment = Moment(app)
 app.config.from_object('config')
-db = SQLAlchemy(app)
+db.init_app(app)
 collections.Callable= collections.abc.Callable
 # TODO: connect to a local postgresql database
 migrate = Migrate(app, db)
 #----------------------------------------------------------------------------#
 # Models.
-from models import *
+
 #----------------------------------------------------------------------------#
 
 
@@ -120,29 +129,21 @@ def show_venue(venue_id):
   venue=Venue.query.get(venue_id)
   upcoming_shows=[]
   past_shows=[]
-  upcoming_shows_count=0
-  past_shows_count=0
   if not venue:   
    return render_template('pages/home.html')
 
   else:
-      for shows in venue.shows:
-        if shows.start_time>   datetime.now():
-          upcoming_shows_count+=1
-          upcoming_shows.append({
-                        "artist_id": shows.artist_id,
-                        "artist_name": shows.artist.name,
-                        "artist_image_link": shows.artist.image_link,
-                        "start_time": format_datetime(str(shows.start_time))  
-          })
-        if shows.start_time< datetime.now():
-          past_shows_count+=1
-          past_shows.append({
-                        "artist_id": shows.artist_id,
-                        "artist_name": shows.artist.name,
-                        "artist_image_link": shows.artist.image_link,
-                        "start_time":format_datetime(str(shows.start_time))    
-          })
+      for show in venue.shows:
+        temp_show = {
+        'artist_id': show.artist_id,
+        'artist_name': show.artist.name,
+        'artist_image_link': show.artist.image_link,
+        'start_time': show.start_time.strftime("%m/%d/%Y, %H:%M")}
+
+        if show.start_time <= datetime.now():
+          past_shows.append(temp_show)
+        else:
+          upcoming_shows.append(temp_show) 
 
       data = {
           "id": venue.id,
@@ -159,8 +160,8 @@ def show_venue(venue_id):
           "image_link": venue.image_link,
           "past_shows": past_shows,
           "upcoming_shows": upcoming_shows,
-          "past_shows_count": past_shows_count,
-          "upcoming_shows_count": upcoming_shows_count,
+          "past_shows_count": len(past_shows),
+          "upcoming_shows_count": len(upcoming_shows),
       }
 
       return render_template('pages/show_venue.html', venue=data)
@@ -177,8 +178,8 @@ def create_venue_form():
 def create_venue_submission():
   # TODO: insert form data as a new Venue record in the db, instead
     # TODO: modify data to be the data object returned from db insertion
+  form=VenueForm()  
   try: 
-    form=VenueForm()
     venue=Venue(
         name=form.name.data,
         city=form.city.data,
@@ -278,28 +279,22 @@ def show_artist(artist_id):
   artist=Artist.query.get(artist_id)
   upcoming_shows=[]
   past_shows=[]
-  upcoming_shows_count=0
-  past_shows_count=0
   if not artist:
       return render_template('pages/home.html')
   else:
-        for shows in artist.shows:
-          if shows.start_time>   datetime.now():
-            upcoming_shows_count+=1
-            upcoming_shows.append({
-                          "artist_id": shows.artist_id,
-                          "artist_name": shows.artist.name,
-                          "artist_image_link": shows.artist.image_link,
-                          "start_time": format_datetime(str(shows.start_time))  
-            })
-          if shows.start_time< datetime.now():
-            past_shows_count+=1
-            past_shows.append({
-                          "artist_id": shows.artist_id,
-                          "artist_name": shows.artist.name,
-                          "artist_image_link": shows.artist.image_link,
-                          "start_time":format_datetime(str(shows.start_time))    
-            })
+        for show in artist.shows:
+         temp_show = {
+        'venue_id': show.venue_id,
+        'venue_name': show.venue.name,
+        'venue_image_link': show.venue.image_link,
+        'start_time': show.start_time.strftime("%m/%d/%Y, %H:%M")}
+
+         if show.start_time <= datetime.now():
+          past_shows.append(temp_show)
+         else:
+          upcoming_shows.append(temp_show) 
+
+       
         data = {
         "id":artist.id,
         "name": artist.name,
@@ -312,11 +307,11 @@ def show_artist(artist_id):
         "seeking_venue": artist.seeking_venue,
         "seeking_description": artist.seeking_description,
         "image_link": artist.image_link,
-        "past_shows": past_shows,
-        "upcoming_shows": upcoming_shows,
-        "past_shows_count": past_shows_count,
-        "upcoming_shows_count": upcoming_shows_count,
-    }
+          "past_shows": past_shows,
+          "upcoming_shows": upcoming_shows,
+          "past_shows_count": len(past_shows),
+          "upcoming_shows_count": len(upcoming_shows),
+      }
 
   return render_template('pages/show_artist.html', artist=data)
 
@@ -458,9 +453,8 @@ def create_artist_submission():
   # called upon submitting the new artist listing form
   # TODO: insert form data as a new Venue record in the db, instead
   # TODO: modify data to be the data object returned from db insertion
-
+  form=ArtistForm()
   try: 
-    form=ArtistForm()
     artist=Artist(
         name=form.name.data,
         city=form.city.data,
@@ -520,8 +514,7 @@ def create_shows():
 def create_show_submission():
   # called to create new shows in the db, upon submitting new show listing form
   # TODO: insert form data as a new Show record in the db, instead
-  form=ShowForm()
-
+  form=ShowForm(request.form)
   show=Show(
     artist_id=form.artist_id.data,
     venue_id=form.venue_id.data,
